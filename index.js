@@ -1,10 +1,11 @@
 const express = require('express')
 const server = express()
+server.use(express.json());
 
 const projects = [{
-  "id":001,
-  "title":"Modelo",
-  "tasks":["Descrição da primeira tarefa", "Descrição da segunda tarefa"]
+  "id": "001",
+  "title": "Modelo",
+  "tasks": ["Descrição da primeira tarefa", "Descrição da segunda tarefa"]
 }]
 let count =  0
 
@@ -18,17 +19,18 @@ function getIndexProject(id){
  * Checa se o id já existe e informa
  */
 function checkIdExists(req,res,next){
-  if(req.body){
+  if(req.body.id){
     if(getIndexProject(req.body.id)) 
       return res.status(400).json({error: "project id exists"})
   }else{
-    if(getIndexProject(req.params.id))
-      return res.status(400).json({error: "project id exists"})
+    if(!getIndexProject(req.params.id))
+      return res.status(400).json({error: "project id not exists"})
   }
   return next()
 }
 
 function checkIdWasInformed(req,res,next){
+  console.log('req: ', req.body);
   if(!req.body.id){
     return res.status(400).json({error: "project id is requeired"})
   }
@@ -43,7 +45,7 @@ function checkTitleWasInformed(req,res,next){
 }
 
 function checkTasksWasInformed(req,res,next){
-  if(!req.body.tasks.lenght){
+  if(!req.body.title){
     return res.status(400).json({error: "project tasks is requeired"})
   }
   return next()
@@ -73,7 +75,8 @@ server.get('/projects', (req,res) =>{
  * dentro de um array no seguinte formato: { id: "1", title: 'Novo projeto', tasks: [] }; 
  * Certifique-se de enviar tanto o ID quanto o título do projeto no formato string com àspas duplas.
  */
-server.post('/projects', checkIdWasInformed, checkTitleWasInformed, (req, res)=>{
+server.post('/projects', checkIdExists, checkIdWasInformed, checkTitleWasInformed, (req, res)=>{
+  if(!req.body.tasks) req.body.tasks = []
   projects.push(req.body)
   return res.json(projects)
 })
@@ -82,7 +85,7 @@ server.post('/projects', checkIdWasInformed, checkTitleWasInformed, (req, res)=>
  * A rota deve receber um campo title e armazenar uma nova tarefa no array de tarefas 
  * de um projeto específico escolhido através do id presente nos parâmetros da rota
  */
-server.post('/projects/:id/:tasks', checkTasksWasInformed, (req,res) =>{
+server.post('/projects/:id/:tasks', checkIdExists, checkTasksWasInformed, (req,res) =>{
   const {id} = req.params
   const index = getIndexProject(id)
   projects[index].tasks.push(req.body.title)
@@ -92,7 +95,7 @@ server.post('/projects/:id/:tasks', checkTasksWasInformed, (req,res) =>{
 /**
  * A rota deve alterar apenas o titulo do projeto com o id presente nos parametros da rota
  */
-server.put('/projects/:id', (req,res) =>{
+server.put('/projects/:id', checkIdExists, (req,res) =>{
   const {id} = req.params
   const index = getIndexProject(id)
   projects[index].title = req.body.title
@@ -102,9 +105,9 @@ server.put('/projects/:id', (req,res) =>{
 /**
  * A rota deve deletar o projeto com o id presente nos parâmetros da rota
  */
-server.delete('/project/:id', (req, res) =>{
+server.delete('/projects/:id', checkIdExists, (req, res) =>{
   const {id} = req.params
-  project = projects.filter(proj => proj.id !== id)
+  projects.splice(getIndexProject(id), 1)
   return res.json(projects)
 })
 
