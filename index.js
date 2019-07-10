@@ -6,9 +6,59 @@ const projects = [{
   "title":"Modelo",
   "tasks":["Descrição da primeira tarefa", "Descrição da segunda tarefa"]
 }]
+let count =  0
 
-server.get('/', (req, res)=>{
-  return res.json({"ok":"Olaaaa"})
+function getIndexProject(id){
+  return projects.map((proj, index)=>{
+      if(proj.id === id) return index
+    }).join('')
+}
+
+/**
+ * Checa se o id já existe e informa
+ */
+function checkIdExists(req,res,next){
+  if(req.body){
+    if(getIndexProject(req.body.id)) 
+      return res.status(400).json({error: "project id exists"})
+  }else{
+    if(getIndexProject(req.params.id))
+      return res.status(400).json({error: "project id exists"})
+  }
+  return next()
+}
+
+function checkIdWasInformed(req,res,next){
+  if(!req.body.id){
+    return res.status(400).json({error: "project id is requeired"})
+  }
+  return next()
+}
+
+function checkTitleWasInformed(req,res,next){
+  if(!req.body.title){
+    return res.status(400).json({error: "project title is requeired"})
+  }
+  return next()
+}
+
+function checkTasksWasInformed(req,res,next){
+  if(!req.body.tasks.lenght){
+    return res.status(400).json({error: "project tasks is requeired"})
+  }
+  return next()
+}
+
+/**
+ * Global que conta as requisições
+ */
+server.use((req, res, next)=>{
+  count += 1
+  console.time("Resquest");
+  console.log(`Request: ${count}`)
+  console.log(`Method: ${req.method}; URL: ${req.url}`)
+  next()
+  console.timeEnd("Resquest");
 })
 
 /**
@@ -23,7 +73,7 @@ server.get('/projects', (req,res) =>{
  * dentro de um array no seguinte formato: { id: "1", title: 'Novo projeto', tasks: [] }; 
  * Certifique-se de enviar tanto o ID quanto o título do projeto no formato string com àspas duplas.
  */
-server.post('/projects', (req, res)=>{
+server.post('/projects', checkIdWasInformed, checkTitleWasInformed, (req, res)=>{
   projects.push(req.body)
   return res.json(projects)
 })
@@ -32,11 +82,9 @@ server.post('/projects', (req, res)=>{
  * A rota deve receber um campo title e armazenar uma nova tarefa no array de tarefas 
  * de um projeto específico escolhido através do id presente nos parâmetros da rota
  */
-server.post('/projects/:id/:tasks', (req,res) =>{
+server.post('/projects/:id/:tasks', checkTasksWasInformed, (req,res) =>{
   const {id} = req.params
-  const index = projects.map((proj, index)=>{
-    if(proj.id === id) return index
-  }).join('')
+  const index = getIndexProject(id)
   projects[index].tasks.push(req.body.title)
   return res.json(projects)
 })
@@ -46,9 +94,7 @@ server.post('/projects/:id/:tasks', (req,res) =>{
  */
 server.put('/projects/:id', (req,res) =>{
   const {id} = req.params
-  const index = projects.map((proj, index)=>{
-    if(proj.id === id) return index
-  }).jpin('')
+  const index = getIndexProject(id)
   projects[index].title = req.body.title
   return res.json(projects)
 })
